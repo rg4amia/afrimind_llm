@@ -10,7 +10,7 @@ def load_jsonl(path):
     with open(path, encoding="utf-8") as f:
         return [json.loads(l) for l in f if l.strip()]
 
-def build_example(tok, rec, max_length):
+def build_example(tok, rec, max_length, system_prompt=None, fmt="chat"):
     """Un enregistrement {"messages": [...]} ou {"prompt", "completion"} devient (input_ids, labels).
     Seul le dernier tour de l'assistant contribue à la perte. Renvoie None si le prompt seul dépasse max_length."""
     messages = rec.get("messages") or [
@@ -18,7 +18,12 @@ def build_example(tok, rec, max_length):
         {"role": "assistant", "content": rec["completion"]},
     ]
     assert messages[-1]["role"] == "assistant", "le dernier message doit être celui de l'assistant"
-    if tok.chat_template:
+    if system_prompt and messages[0]["role"] != "system":
+        messages = [{"role": "system", "content": system_prompt}] + messages
+    if fmt == "completion":
+        # texte brut : le modèle continue le prompt, comme à l'évaluation ; pas de séparateur ajouté
+        prompt, full = messages[-2]["content"], messages[-2]["content"] + messages[-1]["content"] + (tok.eos_token or "")
+    elif tok.chat_template:
         prompt = tok.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True)
         full = tok.apply_chat_template(messages, tokenize=False)
         if not full.startswith(prompt):
@@ -34,8 +39,8 @@ def build_example(tok, rec, max_length):
     return ids, [-100] * n_prompt + ids[n_prompt:]
 
 class SFTDataset(torch.utils.data.Dataset):
-    def __init__(self, tok, records, max_length):
-        built = [build_example(tok, r, max_length) for r in records]
+    def __init__(self, tok, records, max_length, system_prompt=None, fmt="chat"):
+        built = [build_example(tok, r, max_length, system_prompt, fmt) for r in records]
         self.items = [e for e in built if e is not None]
         self.skipped = len(built) - len(self.items)
 

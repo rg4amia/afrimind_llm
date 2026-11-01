@@ -22,8 +22,8 @@ model = get_peft_model(model, LoraConfig(
     target_modules=c["target_modules"], task_type="CAUSAL_LM", bias="none"))
 model.print_trainable_parameters()
 
-train = SFTDataset(tok, load_jsonl(root / c["train_file"]), c["max_length"])
-val = SFTDataset(tok, load_jsonl(root / c["val_file"]), c["max_length"]) if c.get("val_file") else None
+train = SFTDataset(tok, load_jsonl(root / c["train_file"]), c["max_length"], c.get("system_prompt"), c.get("format", "chat"))
+val = SFTDataset(tok, load_jsonl(root / c["val_file"]), c["max_length"], c.get("system_prompt"), c.get("format", "chat")) if c.get("val_file") else None
 print(f"{len(train)} exemples d'entraînement ({train.skipped} écartés : prompt trop long)")
 if len(train) == 0:
     raise SystemExit("Aucun exemple exploitable.")

@@ -1,8 +1,12 @@
 # Copier ce dossier en adapters/<domaine>/ puis lancer : python finetune.py <domaine>
 base_model: deepseek-ai/deepseek-coder-1.3b-instruct   # 6.7b-instruct pour un GPU plus gros
 quantize: 4bit              # "none" pour entraîner sans quantification
+format: chat                # "chat" (template du modèle) ou "completion" (texte brut prompt + completion)
 train_file: train.jsonl     # relatif au dossier de l'adaptateur
 val_file: null              # optionnel
+# Le template de DeepSeek injecte par défaut une consigne « répondre uniquement aux questions d'informatique ».
+# Pour tout domaine hors code, définir ici le message système voulu (utilisé aussi à l'inférence).
+system_prompt: null         # ex. "Tu es un assistant agricole pour des exploitants d'Afrique de l'Ouest."
 max_length: 2048
 epochs: 2
 batch_size: 4

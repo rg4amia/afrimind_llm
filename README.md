@@ -54,3 +54,20 @@ Commencer par des corpus publics et licenciés, avec des fichiers UTF-8 distinct
 - Le nettoyage écarte les fichiers générés, minifiés ou contenant des secrets, dédoublonne à l'identique et décontamine par fenêtres de 10 mots. Il ne fait pas encore de dédoublonnage approximatif (MinHash), de détection de données personnelles ni de tri des fichiers par dépendances.
 - Le tokenizer (BPE octet, symboles FIM, `<file_sep>`, `<repo_name>`, outils, chat) doit être entraîné sur du code réel avant d'utiliser `configs/s.yaml` ou `configs/m.yaml` (vocabulaire de 64 000).
 - Le vocabulaire est configurable, mais doit être identique dans le tokenizer et le modèle.
+
+## Piste B : adapter un modèle de code open-weights (QLoRA)
+Base par défaut : `deepseek-ai/deepseek-coder-1.3b-instruct` (contexte 16 384, licence « deepseek-license » : lire ses conditions avant tout usage commercial). Pour le 6,7 B, changer `base_model` dans `adapter.yaml`.
+
+```bash
+pip install -r requirements-ft.txt
+cp -r adapters/_template adapters/php-laravel     # un dossier par domaine
+# remplacer adapters/php-laravel/train.jsonl par vos données :
+#   {"messages": [{"role": "user", ...}, {"role": "assistant", ...}]}   ou   {"prompt": ..., "completion": ...}
+python finetune.py php-laravel                    # écrit adapters/php-laravel/weights/
+python adapters.py list
+python evaluate.py code --hf deepseek-ai/deepseek-coder-1.3b-instruct --adapter php-laravel --problems data/eval/humaneval.jsonl
+python adapters.py merge php-laravel --out merged/php-laravel   # modèle autonome
+```
+Le template de DeepSeek impose par défaut un message système « informatique uniquement » : pour un domaine hors code, renseigner `system_prompt` dans `adapter.yaml`.
+
+Seul le dernier tour de l'assistant contribue à la perte. Mesurer le modèle de base avec `evaluate.py` avant d'entraîner : un adaptateur qui fait baisser le score de base est un échec, même si la perte d'entraînement diminue.

@@ -1,0 +1,18 @@
+# Expérience Colab : signature + docstring -> corps, sur la bibliothèque standard Python.
+# Sert à valider la chaîne et à détecter une régression sur HumanEval, pas à battre un état de l'art.
+base_model: deepseek-ai/deepseek-coder-1.3b-base
+quantize: 4bit
+format: completion
+system_prompt: null
+train_file: train.jsonl
+val_file: val.jsonl
+max_length: 1024
+epochs: 3
+batch_size: 4
+gradient_accumulation_steps: 4
+learning_rate: 0.0001
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+seed: 42
