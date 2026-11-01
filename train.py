@@ -1,9 +1,9 @@
-import math, random, yaml, numpy as np, torch
+import math, random, sys, yaml, numpy as np, torch
 from pathlib import Path
 from tqdm import trange
 from bekami.model import GPTConfig, BekamiGPT
 
-with open("config.yaml", "r") as f:
+with open(sys.argv[1] if len(sys.argv) > 1 else "config.yaml", "r") as f:
     c = yaml.safe_load(f)
 
 random.seed(c["seed"]); np.random.seed(c["seed"]); torch.manual_seed(c["seed"])
@@ -22,11 +22,7 @@ def get_batch(split):
     y = torch.stack([torch.from_numpy(data[i+1:i+1+c["context_length"]].astype(np.int64)) for i in ix])
     return x.to(device), y.to(device)
 
-cfg = GPTConfig(
-    vocab_size=c["vocab_size"], context_length=c["context_length"],
-    d_model=c["d_model"], n_layers=c["n_layers"], n_heads=c["n_heads"],
-    dropout=c["dropout"]
-)
+cfg = GPTConfig(**{k: c[k] for k in GPTConfig.DEFAULTS if k in c})
 model = BekamiGPT(cfg).to(device)
 print("Parameters:", sum(p.numel() for p in model.parameters())/1e6, "M")
 optimizer = torch.optim.AdamW(model.parameters(), lr=c["learning_rate"], weight_decay=c["weight_decay"])

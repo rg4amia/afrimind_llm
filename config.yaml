@@ -6,6 +6,13 @@ context_length: 1024
 d_model: 384
 n_layers: 6
 n_heads: 6
+n_kv_heads: 2
+rope_theta: 500000.0
+rope_factor: 1.0
+qk_norm: true
+window_size: 0
+global_every: 6
+tie_embeddings: true
 dropout: 0.0
 batch_size: 4
 gradient_accumulation_steps: 8
@@ -17,3 +24,4 @@ max_steps: 5000
 eval_interval: 250
 eval_batches: 20
 save_interval: 500
+fim_rate: 0.5

@@ -24,7 +24,7 @@ Prototype éducatif GPT Decoder-only en PyTorch. Les poids sont initialisés al�
 ```bash
 !pip install -r requirements.txt
 ```
-4. Déposer des corpus texte UTF-8 dans `data/raw/`, un fichier par langue ou source.
+4. Déposer les données dans `data/raw/` : un dossier par dépôt dans `data/raw/repos/<nom>/` (code, licences permissives uniquement) et/ou des `.txt` UTF-8 pour la documentation. Pour décontaminer, placer le texte des benchmarks d'évaluation dans `data/decontam/*.txt`.
 5. Entraîner le tokenizer :
 ```bash
 !python train_tokenizer.py
@@ -51,5 +51,6 @@ Commencer par des corpus publics et licenciés, avec des fichiers UTF-8 distinct
 ## Limites techniques de cette V1
 - Pas encore de instruction tuning, de chat template, de filtrage avancé ni d'évaluation linguistique formelle.
 - Le modèle est un prototype causal de recherche.
-- Le script de préparation charge chaque fichier texte en mémoire : pour de très grands corpus, le remplacer par un pipeline streaming/sharding.
+- Le nettoyage écarte les fichiers générés, minifiés ou contenant des secrets, dédoublonne à l'identique et décontamine par fenêtres de 10 mots. Il ne fait pas encore de dédoublonnage approximatif (MinHash), de détection de données personnelles ni de tri des fichiers par dépendances.
+- Le tokenizer (BPE octet, symboles FIM, `<file_sep>`, `<repo_name>`, outils, chat) doit être entraîné sur du code réel avant d'utiliser `configs/s.yaml` ou `configs/m.yaml` (vocabulaire de 64 000).
 - Le vocabulaire est configurable, mais doit être identique dans le tokenizer et le modèle.
