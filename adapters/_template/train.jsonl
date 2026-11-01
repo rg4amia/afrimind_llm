@@ -1,0 +1,2 @@
+{"messages": [{"role": "user", "content": "Écris une fonction PHP qui retourne le carré d'un nombre."}, {"role": "assistant", "content": "```php\nfunction carre(int $n): int\n{\n    return $n * $n;\n}\n```"}]}
+{"prompt": "Que fait `git stash` ?", "completion": "Il met de côté les modifications non validées pour retrouver un répertoire propre, et `git stash pop` les rétablit."}

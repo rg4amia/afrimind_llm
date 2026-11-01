@@ -1,4 +1,5 @@
 import argparse, json
+from pathlib import Path
 from bekami.evaluate import load_complete, load_problems, run_code_eval, run_passkey
 from bekami.tokenizer import Tokenizer
 
@@ -12,18 +13,33 @@ code = sub.choices["code"]
 code.add_argument("--problems", default="data/eval/smoke.jsonl", help="jsonl au format HumanEval")
 code.add_argument("--canonical", action="store_true", help="vérifie le banc avec les solutions de référence")
 code.add_argument("--out", default=None, help="écrit le détail par problème en jsonl")
+code.add_argument("--hf", default=None, help="modèle Hugging Face (piste B) au lieu d'un checkpoint Bekami")
+code.add_argument("--adapter", default=None, help="domaine de adapters/ à charger sur le modèle --hf")
 pk = sub.choices["passkey"]
 pk.add_argument("--lengths", type=int, nargs="+", default=[512, 1024, 2048, 4096])
 pk.add_argument("--trials", type=int, default=3)
 args = ap.parse_args()
 
 if args.cmd == "code":
-    complete = None if args.canonical else load_complete(args.ckpt, args.tokenizer)
+    if args.canonical:
+        complete = None
+    elif args.hf:
+        from bekami.hf import ADAPTERS_DIR, load_with_adapter, make_hf_complete
+        adapter_dir = ADAPTERS_DIR / args.adapter / "weights" if args.adapter else None
+        model, tok = load_with_adapter(args.hf, adapter_dir)
+        complete = make_hf_complete(model, tok)
+    else:
+        complete = load_complete(args.ckpt, args.tokenizer)
     score, results = run_code_eval(load_problems(args.problems), complete, canonical=args.canonical)
     print(f"pass@1 = {score:.1%} ({sum(r['passed'] for r in results)}/{len(results)})")
     for r in results:
         if not r["passed"]:
             print("  échec", r["task_id"], "-", r["error"])
+    if args.adapter and not args.canonical:
+        eval_file = ADAPTERS_DIR / args.adapter / "eval.json"
+        scores = json.loads(eval_file.read_text()) if eval_file.exists() else {}
+        scores[Path(args.problems).stem] = round(score, 4)
+        eval_file.write_text(json.dumps(scores, indent=1))
     if args.out:
         with open(args.out, "w") as f:
             f.writelines(json.dumps(r) + "\n" for r in results)
