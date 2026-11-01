@@ -1,0 +1,11 @@
+# Politique d'une entreprise. Appliquée par le code AVANT et APRÈS le modèle, pas seulement par le prompt.
+tenant: example
+company_name: Exemple SA
+mode: documents_plus_general      # documents_only : ne répond qu'avec les documents de l'entreprise
+allowed_domains: null             # liste de domaines autorisés (voir domains.yaml) ; null = tous sauf blocked_domains
+blocked_domains: [politique, foi_spiritualite, psychologie_bienetre]
+blocked_topics: ["projet orion", "concurrent alpha"]   # mots ou expressions refusés dans les questions ET les réponses
+code_enabled: true                # false : refuse informatique et cybersécurité
+tools: [search_documents, list_events, add_document]
+extra_instructions: "Ton professionnel et concis. Vouvoie l'utilisateur."
+refusal_message: "Cette demande sort du cadre défini par votre entreprise pour cet assistant."

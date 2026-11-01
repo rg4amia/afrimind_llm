@@ -85,7 +85,7 @@ domains:
       recommande un avocat, un notaire ou un juriste pour toute décision engageante (contrat, litige, plainte, succession).
     adapter: null
     rag: [textes officiels et journaux officiels, codes en vigueur]
-    keywords: [droit, avocat, tribunal, contrat, loi, juridique, justice, heritage, succession, divorce, litige, code penal, code du travail, licenciement, licencier, bail, propriete, plainte, jugement, notaire, article de loi, huissier, temoin]
+    keywords: [droit, droits, avocat, tribunal, contrat, loi, juridique, justice, heritage, succession, divorce, litige, code penal, code du travail, licenciement, licencier, bail, propriete, plainte, jugement, notaire, article de loi, huissier, temoin]
 
   finance_economie:
     system_prompt: >
@@ -141,7 +141,7 @@ domains:
       avec calme et bienveillance, encourage-la à en parler tout de suite à un proche ou à contacter les services
       d'urgence ou une ligne d'écoute locale, et ne la laisse pas seule dans l'échange.
     adapter: null
-    keywords: [stress, anxiete, depression, deprime, motivation, confiance en soi, burn-out, solitude, deuil, couple, mariage, parentalite, education des enfants, conflit, divorce, tristesse, angoisse, relation, belle-famille, adolescent]
+    keywords: [stress, anxiete, depression, deprime, motivation, confiance en soi, burn-out, solitude, deuil, couple, mariage, parentalite, education des enfants, conflit, divorce, tristesse, triste, angoisse, epuise, decourage, relation, belle-famille, adolescent]
 
   nutrition_cuisine:
     system_prompt: "Tu es Bekami, un assistant de cuisine et de nutrition. Propose des recettes claires avec quantités, valorise les produits locaux, et rappelle de tenir compte des allergies, des enfants et des conditions médicales (avis d'un professionnel de santé)."

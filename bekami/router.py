@@ -11,9 +11,10 @@ def normalize(text):
 def load_domains(path="domains.yaml"):
     cfg = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     for d in cfg["domains"].values():
+        # les mots d'au moins 6 lettres tolèrent un suffixe de 3 lettres (stress -> stressé, stresses)
         # une expression de plusieurs mots pèse plus qu'un mot isolé : « code du travail » l'emporte sur « code »
-        d["_patterns"] = [(re.compile(r"(?<!\w)" + re.escape(normalize(k)) + r"(?!\w)"), len(k.split()))
-                          for k in d.get("keywords", [])]
+        d["_patterns"] = [(re.compile(r"(?<!\w)" + re.escape(normalize(k)) + (r"\w{0,3}" if len(k) >= 6 and " " not in k else "") + r"(?!\w)"),
+                           len(k.split())) for k in d.get("keywords", [])]
     return cfg
 
 def route(text, cfg, min_score=1):

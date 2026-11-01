@@ -6,11 +6,14 @@ SYSTEM = (
     "et signale-le."
 )
 
-def build_messages(company, question, hits):
+def build_messages(company, question, hits, domain_prompt=None, extra=None):
     sources = "\n\n".join(
         f"[{i}] ({h['kind']}, {h['date'] or 'sans date'}) {h['title']}\n<<<\n{h['text']}\n>>>" for i, h in enumerate(hits, 1))
-    return [("system", SYSTEM.format(company=company) + "\n\nSOURCES :\n" + (sources or "(aucune source trouvée)")),
-            ("user", question)]
+    head = SYSTEM.format(company=company)
+    for part in (domain_prompt, extra):
+        if part:
+            head += "\n\n" + part.strip()
+    return [("system", head + "\n\nSOURCES :\n" + (sources or "(aucune source trouvée)")), ("user", question)]
 
 def answer(store, user, question, chat, k=5, **filters):
     """`chat(messages) -> texte` : n'importe quel modèle (Bekami, Qwen, DeepSeek, API). Les sources sont filtrées
