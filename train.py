@@ -1,7 +1,7 @@
 import math, random, yaml, numpy as np, torch
 from pathlib import Path
 from tqdm import trange
-from beksam.model import GPTConfig, BeksamGPT
+from bekami.model import GPTConfig, BekamiGPT
 
 with open("config.yaml", "r") as f:
     c = yaml.safe_load(f)
@@ -27,7 +27,7 @@ cfg = GPTConfig(
     d_model=c["d_model"], n_layers=c["n_layers"], n_heads=c["n_heads"],
     dropout=c["dropout"]
 )
-model = BeksamGPT(cfg).to(device)
+model = BekamiGPT(cfg).to(device)
 print("Parameters:", sum(p.numel() for p in model.parameters())/1e6, "M")
 optimizer = torch.optim.AdamW(model.parameters(), lr=c["learning_rate"], weight_decay=c["weight_decay"])
 use_amp = device == "cuda"
@@ -76,5 +76,5 @@ for step in trange(c["max_steps"]):
                    f"checkpoints/step_{step}.pt")
 
 torch.save({"model": model.state_dict(), "config": cfg.__dict__, "step": c["max_steps"]},
-           "checkpoints/beksam_final.pt")
+           "checkpoints/bekami_final.pt")
 print("Entraînement terminé.")

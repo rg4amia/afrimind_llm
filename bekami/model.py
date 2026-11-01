@@ -81,7 +81,7 @@ class GPTConfig:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-class BeksamGPT(nn.Module):
+class BekamiGPT(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg

@@ -1,7 +1,7 @@
 from pathlib import Path
 import sentencepiece as spm
 
-def train_tokenizer(input_files, prefix="tokenizer/beksam", vocab_size=16000):
+def train_tokenizer(input_files, prefix="tokenizer/bekami", vocab_size=16000):
     Path(prefix).parent.mkdir(parents=True, exist_ok=True)
     spm.SentencePieceTrainer.train(
         input=",".join(map(str, input_files)),

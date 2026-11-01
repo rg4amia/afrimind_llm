@@ -1,6 +1,6 @@
 seed: 42
 data_dir: data/processed
-tokenizer_model: tokenizer/beksam
+tokenizer_model: tokenizer/bekami
 vocab_size: 16000
 context_length: 1024
 d_model: 384

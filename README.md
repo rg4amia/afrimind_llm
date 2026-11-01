@@ -1,9 +1,9 @@
-# Beksam LLM — laboratoire from scratch
+# Bekami LLM — laboratoire from scratch
 
 Prototype éducatif GPT Decoder-only en PyTorch. Les poids sont initialisés aléatoirement : aucun poids pré-entraîné n'est utilisé.
 
 ## Origine du nom
-**Beksam** = **B**ernisse, **E**ssenam, **K**andedji, **S**téphane, **A**mia, **M**igan — les prénoms et noms de la famille Amia (Thierry Stéphane, Bernisse Klahon, Essenam Ludivine Jemima, Kandedji Shekinaelle Shiphra, Migan Shilo Doxa).
+**Bekami** = **B**ernisse, **E**ssenam, **K**andedji, **S**téphane, **A**mia, **M**igan — les prénoms et noms de la famille Amia (Thierry Stéphane, Bernisse Klahon, Essenam Ludivine Jemima, Kandedji Shekinaelle Shiphra, Migan Shilo Doxa).
 
 ## Important
 - La configuration fournie vise un petit modèle expérimental (~20–30M paramètres).

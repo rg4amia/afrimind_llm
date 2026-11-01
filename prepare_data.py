@@ -1,7 +1,7 @@
 from pathlib import Path
 import numpy as np
 from tqdm import tqdm
-from beksam.tokenizer import Tokenizer
+from bekami.tokenizer import Tokenizer
 
 RAW = Path("data/raw")
 OUT = Path("data/processed")
@@ -11,7 +11,7 @@ def main():
     sources = sorted(RAW.glob("*.txt"))
     if not sources:
         raise SystemExit("Ajoute d'abord des fichiers .txt dans data/raw/")
-    tok = Tokenizer("tokenizer/beksam.model")
+    tok = Tokenizer("tokenizer/bekami.model")
     all_ids = []
     for path in sources:
         print("Tokenisation:", path.name)
