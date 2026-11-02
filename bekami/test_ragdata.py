@@ -25,7 +25,7 @@ check("aucune question d'évaluation dans l'entraînement",
 
 ref = {str(prompt_messages(r)): reference(r) for r in rows}
 score, by_kind, _ = run_rag_eval(rows, lambda m: ref[str(m)])
-check("réponses de référence : 100 % à chaque type", score == 1.0 and len(by_kind) == 9)
+check("réponses de référence : 100 % à chaque type", score == 1.0 and len(by_kind) == 12)
 
 score, by_kind, _ = run_rag_eval(rows, lambda m: "Je ne sais pas.")
 check("réponse vide de sens : échoue sur réponses, outils et injections", score < 0.2)
@@ -42,6 +42,19 @@ _, by_kind, _ = run_rag_eval(lat, lambda m: stale[str(m)])
 check("répondre avec l'ancienne version est détecté", lat and by_kind["latest"] == 0.0)
 check("version la plus récente : date postérieure à l'ancienne",
       all("plus récente" in reference(r) for r in lat))
+
+cap = [r for r in rows if r["kind"] == "cap"]
+flip = {str(prompt_messages(r)): ("Oui" if r["expect"]["starts"] == "non" else "Non") + f", {r['expect']['must'][0]} [{r['expect']['n']}]." for r in cap}
+_, by_kind, _ = run_rag_eval(cap, lambda m: flip[str(m)])
+check("réponse oui/non inversée détectée", cap and by_kind["cap"] == 0.0)
+check("oui/non équilibrés dans les données", 0.25 < sum(r["expect"]["starts"] == "oui" for r in generate(400, 5, "train") if r["kind"] == "cap") / sum(r["kind"] == "cap" for r in generate(400, 5, "train")) < 0.75)
+rule = [r for r in rows if r["kind"] == "rule"]
+_, by_kind, _ = run_rag_eval(rule, lambda m: "Les sources fournies ne contiennent pas cette information.")
+check("refuser une question à règle par défaut est compté comme échec", rule and by_kind["rule"] == 0.0)
+noisy = [r for r in rows if r["kind"] == "noisy"]
+check("sources bruitées : plusieurs paragraphes dans la source utile",
+      noisy and all(len(r["messages"][0]["content"].split("<<<")) >= 2 and r["messages"][0]["content"].count("\n\n") >= 4 for r in noisy))
+check("pas de « 1 jours » dans les questions", not any(" 1 jours" in r["messages"][-2]["content"] for r in generate(300, 7, "train")))
 
 # le prompt d'entraînement d'un appel d'outil est exactement celui que l'agent envoie au modèle
 row = next(r for r in train if r["kind"] == "tool_call")

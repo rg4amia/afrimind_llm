@@ -10,3 +10,6 @@ adapters/*/runs/
 merged/
 dist/
 .DS_Store
+models/
+*.gguf
+data/demo_db/

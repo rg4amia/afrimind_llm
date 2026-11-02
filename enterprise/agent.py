@@ -98,4 +98,4 @@ class Agent:
         cited = {int(n) for n in re.findall(r"\[(\d+)\]", text)}
         return dict(answer=text, domain=decision.domain, denied=None, steps=step,
                     grounded=bool(cited & {s["n"] for s in self.sources}),
-                    sources=[s for s in self.sources if s["n"] in cited] or self.sources)
+                    sources=[s for s in self.sources if s["n"] in cited])
