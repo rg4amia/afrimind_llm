@@ -3,7 +3,9 @@ from pathlib import Path
 from tqdm import trange
 from bekami.model import GPTConfig, BekamiGPT
 
-with open(sys.argv[1] if len(sys.argv) > 1 else "config.yaml", "r") as f:
+args = [a for a in sys.argv[1:] if a != "--resume"]
+resume = "--resume" in sys.argv   # reprend depuis checkpoints/last.pt (sessions Colab interrompues)
+with open(args[0] if args else "config.yaml", "r") as f:
     c = yaml.safe_load(f)
 
 random.seed(c["seed"]); np.random.seed(c["seed"]); torch.manual_seed(c["seed"])
@@ -30,6 +32,16 @@ use_amp = device == "cuda"
 amp_dtype = torch.bfloat16 if use_amp and torch.cuda.is_bf16_supported() else torch.float16
 scaler = torch.amp.GradScaler("cuda", enabled=use_amp and amp_dtype == torch.float16)
 
+start_step = 0
+if resume and Path("checkpoints/last.pt").exists():
+    ckpt = torch.load("checkpoints/last.pt", map_location=device, weights_only=False)
+    model.load_state_dict(ckpt["model"]); optimizer.load_state_dict(ckpt["optimizer"])
+    start_step = ckpt["step"] + 1
+    print("Reprise au pas", start_step)
+
+def save(path, step):
+    torch.save({"model": model.state_dict(), "optimizer": optimizer.state_dict(), "config": cfg.__dict__, "step": step}, path)
+
 def lr_at(step):
     if step < c["warmup_steps"]:
         return c["learning_rate"] * (step+1) / c["warmup_steps"]
@@ -50,7 +62,7 @@ def estimate():
 
 Path("checkpoints").mkdir(exist_ok=True)
 model.train()
-for step in trange(c["max_steps"]):
+for step in trange(start_step, c["max_steps"]):
     lr = lr_at(step)
     for pg in optimizer.param_groups: pg["lr"] = lr
     optimizer.zero_grad(set_to_none=True)
@@ -68,8 +80,8 @@ for step in trange(c["max_steps"]):
         val_loss = estimate()
         print(f"step {step}: val_loss={val_loss:.4f}, lr={lr:.2e}")
     if step > 0 and step % c["save_interval"] == 0:
-        torch.save({"model": model.state_dict(), "config": cfg.__dict__, "step": step},
-                   f"checkpoints/step_{step}.pt")
+        save(f"checkpoints/step_{step}.pt", step)
+        save("checkpoints/last.pt", step)
 
 torch.save({"model": model.state_dict(), "config": cfg.__dict__, "step": c["max_steps"]},
            "checkpoints/bekami_final.pt")

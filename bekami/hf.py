@@ -105,6 +105,12 @@ def make_hf_complete(model, tok):
         return tok.decode(out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True)
     return complete
 
+def make_hf_chat(model, tok, max_new_tokens=200):
+    """chat(messages: list[dict]) -> texte, avec le chat template du modèle et un décodage déterministe."""
+    complete = make_hf_complete(model, tok)
+    return lambda messages: complete(tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True),
+                                     max_new_tokens).strip()
+
 def list_adapters(root=ADAPTERS_DIR):
     rows = []
     for d in sorted(p for p in Path(root).iterdir() if p.is_dir() and (p / "adapter.yaml").exists()):

@@ -1,0 +1,18 @@
+# Comportement RAG/agent : citer [n], dire « pas dans les sources », résister aux injections, appeler les outils.
+# Les messages système sont déjà dans les données (identiques à ceux de l'exécution) : system_prompt reste null.
+base_model: Qwen/Qwen2.5-1.5B-Instruct    # Apache-2.0, multilingue ; à confirmer (3B ou 7B si le GPU le permet)
+quantize: 4bit
+format: chat
+system_prompt: null
+train_file: train.jsonl
+val_file: val.jsonl
+max_length: 2048
+epochs: 2
+batch_size: 4
+gradient_accumulation_steps: 8
+learning_rate: 0.0002
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+seed: 42

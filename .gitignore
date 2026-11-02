@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+checkpoints/
+tokenizer/
+data/raw/
+data/processed/
+adapters/*/weights/
+adapters/*/runs/
+merged/
+dist/
+.DS_Store

@@ -71,3 +71,47 @@ python adapters.py merge php-laravel --out merged/php-laravel   # modèle autono
 Le template de DeepSeek impose par défaut un message système « informatique uniquement » : pour un domaine hors code, renseigner `system_prompt` dans `adapter.yaml`.
 
 Seul le dernier tour de l'assistant contribue à la perte. Mesurer le modèle de base avec `evaluate.py` avant d'entraîner : un adaptateur qui fait baisser le score de base est un échec, même si la perte d'entraînement diminue.
+
+## Architecture et orientation
+
+Bekami a deux pistes, et une couche qui les sert :
+
+| Couche | Rôle | GPU |
+|---|---|---|
+| `bekami/` + `train.py` (piste A) | GPT from scratch : apprendre, valider la chaîne. `config.yaml` (~16 M) tient sur un Colab gratuit ; `s.yaml` (~124 M) et `m.yaml` (~1,3 B) demandent bien plus de données et de calcul qu'un prototype n'en a | oui |
+| `finetune.py` + `adapters/` (piste B) | **Voie principale** : un adaptateur QLoRA par domaine sur un modèle ouvert de 1–7 B, fusionnable | un seul GPU 16 Go suffit |
+| `enterprise/` | Exécution : politique -> RAG avec permissions -> modèle -> contrôle de sortie ; boucle d'agent (`agent.py`) | non : llama.cpp sur CPU |
+
+Principe : un petit modèle ouvert, spécialisé par adaptateurs, ne retient pas les faits (c'est le rôle du RAG) mais le **comportement** : citer ses sources, refuser quand elles manquent, appeler les outils au bon format.
+
+### Agent
+`enterprise/agent.py` exécute `search_documents`, `list_events`, `add_document` avec les droits de l'utilisateur. Format d'appel : `<tool_call>{"name", "arguments"}</tool_call>` -> `<tool_result>…</tool_result>` (mêmes symboles que le tokenizer). Seuls les outils de `policy.tools` existent, le nombre d'étapes est borné, et les résultats d'outils sont traités comme des données.
+
+```python
+from enterprise.agent import Agent
+Agent(store, policy, domains, chat).run(user, "Quelles réunions cette semaine ?")
+```
+
+### Reprise d'entraînement (piste A)
+`python train.py config.yaml --resume` repart de `checkpoints/last.pt` (poids + optimiseur + pas) après une coupure Colab.
+
+### Feuille de route (par ordre de valeur)
+1. **Données de comportement RAG/agent** (démarré : `python build_rag_sft.py`, voir ci-dessous) : générer des exemples `{sources, question} -> réponse citée [n]`, `-> « pas dans les sources »`, et des trajectoires d'appels d'outils ; les mettre dans `adapters/rag-agent/train.jsonl`. C'est ce qui rend le modèle utile en agent, bien plus que d'ajouter des paramètres.
+2. **Évaluation RAG** (`data/eval/rag.jsonl`) : taux de citations valides, taux de refus correct, taux d'appels d'outils bien formés. Mesurer le modèle de base avant tout entraînement.
+3. **Récupération hybride** : garder BM25 (FTS5), ajouter un petit modèle d'embeddings sur CPU (ex. multilingual-e5-small) et fusionner les classements (RRF). Les permissions restent appliquées dans la requête.
+4. **Quantification et livraison** : fusionner l'adaptateur, convertir en GGUF Q4_K_M, brancher `CPUChat`, empaqueter avec `deploy/build_bundle.sh`.
+5. **Piste A** : ne passer à `s.yaml` qu'avec un corpus propre de plusieurs milliards de tokens ; sinon rester sur la piste B.
+
+### Jeu de données et banc RAG/agent
+```bash
+python build_rag_sft.py                       # adapters/rag-agent/{train,val}.jsonl + data/eval/rag.jsonl
+python evaluate_rag.py --oracle               # vérifie le banc (doit afficher 100 %)
+python evaluate_rag.py --hf Qwen/Qwen2.5-1.5B-Instruct                    # modèle de base, AVANT entraînement
+python finetune.py rag-agent
+python evaluate_rag.py --hf Qwen/Qwen2.5-1.5B-Instruct --adapter rag-agent
+```
+9 types de cas : réponse citée, version la plus récente quand deux sources se contredisent, refus (sources sans réponse), résistance à une instruction injectée dans une source, appel `search_documents` / `list_events`, réponse après résultat d'outil, résultat vide. Les prompts sont construits par les mêmes fonctions que l'exécution (`enterprise.qa`, `enterprise.agent.agent_head`) ; les sujets du banc n'apparaissent jamais dans l'entraînement. Sur Colab, `Bekami_Colab_RAG_Agent.ipynb` enchaîne ces étapes (régénération, mesure de base, entraînement, mesure avec adaptateur, tableau comparatif par comportement). `--out fichier.json` de `evaluate_rag.py` enregistre les scores.
+
+Les données comptent 20 sujets d'entraînement (6 pour le banc), plusieurs formulations par sujet, l'accord singulier/pluriel, des préfixes de politesse, des distracteurs et des documents sans date. `build_rag_sft.py` retire les doublons de prompt et garantit qu'aucun prompt n'est commun à l'entraînement, à la validation et au banc. Limite : ce sont toujours des gabarits en français : ils apprennent le **format** et la discipline de citation, pas la variété du langage réel. Pour les documents réels de l'entreprise et les langues africaines, déposer des exemples relus par des locuteurs dans `data/curated/*.jsonl` (voir `data/curated/README.md`) : ils sont ajoutés à l'entraînement au prochain `build_rag_sft.py`. Ne pas y mettre de traduction automatique non relue.
+
+Tests : `python -m bekami.test_ragdata`, `python -m bekami.test_router`, `python -m enterprise.test_store`, `python -m enterprise.test_assistant`, `python -m enterprise.test_agent`.

@@ -8,5 +8,5 @@ echo "2/4 Création de l'environnement et installation depuis le paquet local (a
 python3 -m venv .venv
 .venv/bin/pip install --no-index --find-links wheelhouse -r requirements-runtime.txt -q
 echo "3/4 Auto-test de la politique et des permissions"
-.venv/bin/python -m enterprise.test_store >/dev/null && .venv/bin/python -m enterprise.test_assistant >/dev/null
+.venv/bin/python -m enterprise.test_store >/dev/null && .venv/bin/python -m enterprise.test_assistant >/dev/null && .venv/bin/python -m enterprise.test_agent >/dev/null
 echo "4/4 Terminé. Modèle(s) disponible(s) : $(ls models)"
