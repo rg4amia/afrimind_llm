@@ -7,6 +7,8 @@ from bekami.hf import ADAPTERS_DIR, PadCollator, SFTDataset, load_base, load_jso
 ap = argparse.ArgumentParser(description="Fine-tuning QLoRA d'un adaptateur de domaine")
 ap.add_argument("domain", help="dossier adapters/<domaine>/ contenant adapter.yaml et les données")
 ap.add_argument("--max-steps", type=int, default=-1, help="limite le nombre de pas (test rapide)")
+ap.add_argument("--runs-dir", default=None, help="dossier des points de reprise (mettre un dossier Drive sur Colab)")
+ap.add_argument("--save-steps", type=int, default=10, help="un point de reprise tous les N pas")
 args = ap.parse_args()
 
 root = ADAPTERS_DIR / args.domain
@@ -33,14 +35,17 @@ bf16 = cuda and torch.cuda.is_bf16_supported()
 trainer = Trainer(
     model=model, train_dataset=train, eval_dataset=val, data_collator=PadCollator(tok.pad_token_id),
     args=TrainingArguments(
-        output_dir=str(root / "runs"), per_device_train_batch_size=c["batch_size"],
+        output_dir=str(args.runs_dir or root / "runs"), per_device_train_batch_size=c["batch_size"],
         gradient_accumulation_steps=c["gradient_accumulation_steps"],
         learning_rate=c["learning_rate"], num_train_epochs=c["epochs"], max_steps=args.max_steps,
-        lr_scheduler_type="cosine", warmup_steps=10, logging_steps=10, save_strategy="no",
+        lr_scheduler_type="cosine", warmup_steps=10, logging_steps=10, save_strategy="steps", save_steps=args.save_steps, save_total_limit=2,
         eval_strategy="epoch" if val else "no", bf16=bf16, fp16=cuda and not bf16,
         gradient_checkpointing=cuda, report_to="none", remove_unused_columns=False,
         seed=c["seed"], use_cpu=not cuda))
-trainer.train()
+from transformers.trainer_utils import get_last_checkpoint
+last = get_last_checkpoint(str(args.runs_dir or root / "runs")) if (args.runs_dir or (root / "runs").exists()) else None
+print("Reprise depuis", last) if last else print("Nouvel entraînement")
+trainer.train(resume_from_checkpoint=last)
 
 out = root / "weights"
 model.save_pretrained(out)

@@ -65,7 +65,7 @@ system_prompt: null
 train_file: train.jsonl
 val_file: val.jsonl
 max_length: 2048
-epochs: 2
+epochs: 1
 batch_size: 4
 gradient_accumulation_steps: 8
 learning_rate: 0.0002
