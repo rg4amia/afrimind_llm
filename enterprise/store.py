@@ -114,6 +114,15 @@ class TenantStore:
             [q] + params + [k]).fetchall()
         return [dict(r) for r in rows]
 
+    def list_documents(self, user):
+        """Documents visibles par l'utilisateur, du plus récent au plus ancien (sans le texte)."""
+        cond, params = self._visible(user)
+        rows = self.db.execute(
+            f"""SELECT d.id, d.kind, d.title, d.author, d.date, d.created_at,
+                       (SELECT group_concat(grp) FROM acl WHERE doc_id = d.id) AS groups
+                FROM documents d WHERE {cond} ORDER BY d.id DESC""", params).fetchall()
+        return [{**dict(r), "groups": sorted((r["groups"] or "").split(","))} for r in rows]
+
     def list_events(self, user, start, end):
         """Requête structurée (pas de recherche par sens) : 'quelles réunions cette semaine ?'."""
         cond, params = self._visible(user)

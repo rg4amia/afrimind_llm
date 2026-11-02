@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bekami — assistant</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1b1f24; --muted:#667085; --line:#e4e7ec; --brand:#0f766e; --brand-ink:#fff; --warn:#92400e; --warn-bg:#fef3c7; --err:#b42318; --me:#e6f4f1; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e1116; --card:#161b22; --ink:#e6edf3; --muted:#9aa4b2; --line:#2a313c; --brand:#2dd4bf; --brand-ink:#04211e; --warn:#fcd34d; --warn-bg:#2b2208; --err:#f97066; --me:#12302c; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; background:var(--bg); color:var(--ink); height:100vh; display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--card); border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0; flex:1; }
+  header small { color:var(--muted); }
+  main { flex:1; min-height:0; display:grid; grid-template-columns:340px 1fr; }
+  @media (max-width:800px) { main { grid-template-columns:1fr; grid-template-rows:auto 1fr; } }
+  aside { border-right:1px solid var(--line); background:var(--card); display:flex; flex-direction:column; min-height:0; }
+  aside h2, .chat-head { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0; padding:12px 16px 6px; }
+  #docs { list-style:none; margin:0; padding:0 8px; overflow:auto; flex:1; }
+  #docs li { display:flex; gap:6px; align-items:center; padding:8px; border-radius:8px; }
+  #docs li:hover { background:var(--bg); }
+  #docs button.t { flex:1; text-align:left; background:none; border:0; color:var(--ink); cursor:pointer; padding:0; font:inherit; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tag { font-size:11px; padding:1px 7px; border-radius:99px; background:var(--bg); border:1px solid var(--line); color:var(--muted); white-space:nowrap; }
+  .del { background:none; border:0; color:var(--err); cursor:pointer; font-size:16px; }
+  form#add { padding:12px 16px; border-top:1px solid var(--line); display:grid; gap:8px; }
+  input, textarea, select { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); width:100%; }
+  textarea { resize:vertical; min-height:90px; }
+  button.primary { background:var(--brand); color:var(--brand-ink); border:0; border-radius:8px; padding:9px 14px; font:inherit; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .chat { display:flex; flex-direction:column; min-height:0; }
+  #log { flex:1; overflow:auto; padding:8px 16px 16px; display:flex; flex-direction:column; gap:12px; }
+  .msg { max-width:760px; padding:10px 14px; border-radius:12px; background:var(--card); border:1px solid var(--line); white-space:pre-wrap; word-wrap:break-word; }
+  .msg.me { align-self:flex-end; background:var(--me); }
+  .msg.sys { color:var(--muted); background:none; border:0; text-align:center; align-self:center; }
+  .meta { font-size:12px; color:var(--muted); margin-top:6px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .meta button { background:var(--bg); border:1px solid var(--line); color:var(--ink); border-radius:99px; padding:1px 9px; cursor:pointer; font-size:12px; }
+  .avis { margin-top:8px; font-size:12px; color:var(--warn); background:var(--warn-bg); padding:4px 8px; border-radius:6px; }
+  .denied { color:var(--err); }
+  #ask { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); background:var(--card); }
+  dialog { border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink); max-width:680px; width:92vw; }
+  dialog pre { white-space:pre-wrap; max-height:55vh; overflow:auto; background:var(--bg); padding:10px; border-radius:8px; }
+  .err { color:var(--err); font-size:13px; min-height:1em; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Bekami <small>· assistant sur vos documents (version provisoire)</small></h1>
+  <label for="user" style="font-size:13px;color:var(--muted)">Utilisateur</label>
+  <select id="user" style="width:auto"></select>
+</header>
+<main>
+  <aside>
+    <h2>Documents du RAG <span id="count" class="tag"></span></h2>
+    <ul id="docs"></ul>
+    <form id="add" hidden>
+      <strong style="font-size:13px">Ajouter un document</strong>
+      <input id="title" placeholder="Titre" maxlength="200" required>
+      <textarea id="text" placeholder="Collez le texte, ou choisissez un fichier (.txt, .md, .docx, .pdf) : il sera converti en texte, à relire avant d'ajouter" required></textarea>
+      <input id="file" type="file" accept=".txt,.md,.docx,.pdf">
+      <div id="note" style="font-size:12px;color:var(--muted);min-height:1em"></div>
+      <select id="groups"></select>
+      <button class="primary" id="addbtn">Ajouter</button>
+      <div class="err" id="adderr"></div>
+    </form>
+    <div id="noedit" style="padding:12px 16px;border-top:1px solid var(--line);color:var(--muted);font-size:13px" hidden>Cet utilisateur ne peut pas ajouter de documents.</div>
+  </aside>
+  <section class="chat">
+    <div class="chat-head">Discussion</div>
+    <div id="log"><div class="msg sys">Posez une question sur les documents de la colonne de gauche. Chaque question est traitée séparément.</div></div>
+    <form id="ask">
+      <input id="q" placeholder="Votre question…" autocomplete="off" maxlength="2000" required>
+      <button class="primary" id="send">Envoyer</button>
+    </form>
+  </section>
+</main>
+<dialog id="dlg"><h3 id="dtitle" style="margin-top:0"></h3><pre id="dtext"></pre><form method="dialog"><button class="primary">Fermer</button></form></dialog>
+<script>
+const $ = (id) => document.getElementById(id);
+let users = [];
+
+async function api(path, body) {
+  const opt = body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {};
+  const r = await fetch(path, opt);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ('Erreur ' + r.status));
+  return data;
+}
+const me = () => $('user').value;
+
+function el(tag, props = {}, ...kids) {
+  const e = Object.assign(document.createElement(tag), props);
+  kids.forEach((k) => e.append(k));
+  return e;
+}
+
+async function loadUsers() {
+  users = await api('/api/users');
+  $('user').replaceChildren(...users.map((u) => el('option', { value: u.id, textContent: u.label })));
+  await refreshUser();
+}
+
+async function refreshUser() {
+  const u = users.find((x) => x.id === me());
+  $('add').hidden = !u.editor;
+  $('noedit').hidden = u.editor;
+  const opts = [el('option', { value: '*', textContent: 'Visible par toute l\'entreprise' })]
+    .concat(u.groups.map((g) => el('option', { value: g, textContent: 'Réservé au groupe : ' + g })));
+  $('groups').replaceChildren(...opts);
+  await loadDocs();
+}
+
+async function loadDocs() {
+  const docs = await api('/api/docs?user=' + encodeURIComponent(me()));
+  $('count').textContent = docs.length;
+  const u = users.find((x) => x.id === me());
+  $('docs').replaceChildren(...docs.map((d) => {
+    const li = el('li');
+    const t = el('button', { className: 't', textContent: d.title, title: d.title });
+    t.onclick = () => openDoc(d.id);
+    li.append(t, el('span', { className: 'tag', textContent: d.groups.includes('*') ? 'tous' : d.groups.join(', ') }));
+    if (u.editor) {
+      const x = el('button', { className: 'del', textContent: '×', title: 'Supprimer' });
+      x.onclick = async () => {
+        if (!confirm('Supprimer définitivement « ' + d.title + ' » ?')) return;
+        try { await api('/api/docs/delete', { user: me(), id: d.id }); await loadDocs(); } catch (e) { alert(e.message); }
+      };
+      li.append(x);
+    }
+    return li;
+  }));
+  if (!docs.length) $('docs').append(el('li', { textContent: 'Aucun document. Ajoutez-en pour que l\'assistant puisse répondre.', style: 'color:var(--muted)' }));
+}
+
+async function openDoc(id) {
+  try {
+    const d = await api('/api/doc?user=' + encodeURIComponent(me()) + '&id=' + id);
+    $('dtitle').textContent = d.title;
+    $('dtext').textContent = d.text;
+    $('dlg').showModal();
+  } catch (e) { alert(e.message); }
+}
+
+function toBase64(buf) {
+  let bin = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+$('file').onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  $('adderr').textContent = ''; $('note').textContent = '';
+  if (f.size > 25_000_000) { $('adderr').textContent = 'Fichier trop gros (25 Mo max).'; return; }
+  $('addbtn').disabled = true; $('note').textContent = 'Conversion de « ' + f.name + ' »…';
+  try {
+    const r = await api('/api/convert', { user: me(), filename: f.name, data: toBase64(await f.arrayBuffer()) });
+    $('text').value = r.text;
+    if (!$('title').value) $('title').value = r.title;
+    $('note').textContent = 'Converti depuis ' + r.source + ' (' + r.chars.toLocaleString('fr-FR') + ' caractères). Relisez le texte, puis ajoutez.';
+  } catch (err) {
+    $('adderr').textContent = err.message; $('note').textContent = ''; $('file').value = '';
+  }
+  $('addbtn').disabled = false;
+};
+
+$('add').onsubmit = async (e) => {
+  e.preventDefault();
+  $('addbtn').disabled = true; $('adderr').textContent = '';
+  try {
+    await api('/api/docs', { user: me(), title: $('title').value, text: $('text').value, groups: [$('groups').value] });
+    $('title').value = ''; $('text').value = ''; $('file').value = ''; $('note').textContent = '';
+    await loadDocs();
+  } catch (err) { $('adderr').textContent = err.message; }
+  $('addbtn').disabled = false;
+};
+
+function bubble(cls, text) {
+  const m = el('div', { className: 'msg ' + cls, textContent: text });
+  $('log').append(m);
+  $('log').scrollTop = $('log').scrollHeight;
+  return m;
+}
+
+$('ask').onsubmit = async (e) => {
+  e.preventDefault();
+  const question = $('q').value.trim();
+  if (!question) return;
+  $('q').value = ''; $('send').disabled = true;
+  bubble('me', question);
+  const wait = bubble('sys', 'Réflexion en cours…');
+  try {
+    const r = await api('/api/chat', { user: me(), question });
+    wait.remove();
+    const m = bubble(r.denied ? 'denied' : '', r.answer);
+    const meta = el('div', { className: 'meta' });
+    if (r.denied) meta.append(el('span', { className: 'denied', textContent: 'Refusé : ' + r.denied }));
+    else meta.append(el('span', { textContent: r.grounded ? 'Appuyé sur vos documents' : 'Aucune source citée' }));
+    r.sources.forEach((s) => {
+      const b = el('button', { textContent: '[' + s.n + '] ' + s.title, title: 'Voir le document' });
+      b.onclick = () => openDoc(s.doc_id);
+      meta.append(b);
+    });
+    m.append(meta, el('div', { className: 'avis', textContent: "Généré par l'IA, qui peut se tromper : vérifiez avant de décider." }));
+  } catch (err) {
+    wait.remove();
+    bubble('denied', 'Erreur : ' + err.message);
+  }
+  $('send').disabled = false; $('q').focus();
+};
+
+$('user').onchange = refreshUser;
+loadUsers().catch((e) => bubble('denied', 'Impossible de charger l\'interface : ' + e.message));
+</script>
+</body>
+</html>

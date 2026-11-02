@@ -1,3 +1,4 @@
 # Dépendances d'exécution d'une installation entreprise (CPU, hors ligne). Rien d'autre n'est installé chez le client.
 pyyaml>=6.0
 llama-cpp-python>=0.3
+pypdf>=5.0   # conversion des PDF en texte (interface web)

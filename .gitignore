@@ -13,3 +13,4 @@ dist/
 models/
 *.gguf
 data/demo_db/
+data/webui/

@@ -114,4 +114,14 @@ python evaluate_rag.py --hf Qwen/Qwen2.5-1.5B-Instruct --adapter rag-agent
 
 Les données comptent 20 sujets d'entraînement (6 pour le banc), plusieurs formulations par sujet, l'accord singulier/pluriel, des préfixes de politesse, des distracteurs et des documents sans date. `build_rag_sft.py` retire les doublons de prompt et garantit qu'aucun prompt n'est commun à l'entraînement, à la validation et au banc. Limite : ce sont toujours des gabarits en français : ils apprennent le **format** et la discipline de citation, pas la variété du langage réel. Pour les documents réels de l'entreprise et les langues africaines, déposer des exemples relus par des locuteurs dans `data/curated/*.jsonl` (voir `data/curated/README.md`) : ils sont ajoutés à l'entraînement au prochain `build_rag_sft.py`. Ne pas y mettre de traduction automatique non relue.
 
-Tests : `python -m bekami.test_ragdata`, `python -m bekami.test_router`, `python -m enterprise.test_store`, `python -m enterprise.test_assistant`, `python -m enterprise.test_agent`.
+### Interface web provisoire (chat + documents du RAG)
+```bash
+pip install -r requirements-runtime.txt          # llama-cpp-python, pyyaml…
+python -m webui.server --model models/bekami-rag-agent-Q4_K_M.gguf     # puis http://127.0.0.1:8765
+python -m webui.server --mock                                           # sans modèle, pour essayer l'interface
+```
+À gauche : les documents du RAG (ajout par texte collé ou par fichier `.txt`, `.md`, `.docx` ou `.pdf`, lecture, suppression). À droite : le chat ; chaque réponse affiche ses sources (cliquables pour vérifier la citation) et l'avertissement « Généré par l'IA ». Les documents sont stockés dans `data/webui/` (une base SQLite, ignorée par git).
+
+Limites assumées : pas d'authentification (le sélecteur d'utilisateur montre les permissions par groupe, il ne les garantit pas) ; écoute uniquement sur `127.0.0.1` ; un seul fil (une question à la fois) ; chaque question est traitée séparément, sans mémoire de la conversation ; conversion automatique en texte avant indexation (`enterprise/convert.py`) : le texte converti est affiché pour relecture avant l'ajout ; **pas d'OCR** (un PDF scanné est refusé avec un message), pas d'ancien `.doc`, pas de PDF protégé par mot de passe, tableaux et listes Word conservés en Markdown mais pas les images, en-têtes ni notes de bas de page ; l'extraction PDF peut introduire des espaces parasites ; le modèle ne peut pas créer de documents de lui-même, seul le panneau le permet.
+
+Tests : `python -m enterprise.test_convert`, `python -m webui.test_server`, `python -m bekami.test_ragdata`, `python -m bekami.test_router`, `python -m enterprise.test_store`, `python -m enterprise.test_assistant`, `python -m enterprise.test_agent`.
